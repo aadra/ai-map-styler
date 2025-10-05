@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Map Styler</title>
+
+  <!-- ✅ Load Leaflet from CDN -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-sA+4X8rY0bLk8N2J0wLB1Dyw9g0tCBLJg4l0i5A6pOc="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-o9N1j7kPvxH1Q3vCqgU7MfjrJz5scc1l9+1i3dAyy+o="
+    crossorigin=""
+  ></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      background: #f0f0f0;
+      padding: 20px;
+    }
+    #map {
+      height: 400px;
+      width: 80%;
+      margin: 20px auto;
+      border-radius: 10px;
+    }
+    textarea, button {
+      padding: 10px;
+      margin: 10px;
+      width: 80%;
+      font-size: 16px;
+    }
+    button {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>AI Map Styler 🗺️</h1>
+
+  <textarea id="prompt" placeholder="Describe your map style (e.g., bubblegum pink oceans, neon green parks)..."></textarea>
+  <br />
+  <button id="generateBtn">Generate Map Style</button>
+  <button id="downloadBtn" style="display:none;">Download HTML</button>
+
+  <div id="map"></div>
+
+  <script>
+    let map = L.map('map').setView([20, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const generateBtn = document.getElementById('generateBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const promptInput = document.getElementById('prompt');
+
+    generateBtn.addEventListener('click', async () => {
+      const prompt = promptInput.value.trim();
+      if (!prompt) return alert('Please enter a prompt');
+
+      generateBtn.disabled = true;
+      generateBtn.textContent = 'Generating...';
+
+      const res = await fetch('/.netlify/functions/generate-style', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+
+      const data = await res.json();
+      generateBtn.disabled = false;
+      generateBtn.textContent = 'Generate Map Style';
+
+      if (data.styleJSON) {
+        const styles = JSON.parse(data.styleJSON);
+
+        document.body.style.background = styles.background || "#f0f0f0";
+        map.eachLayer(layer => map.removeLayer(layer));
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap',
+          className: 'ai-style'
+        }).addTo(map);
+
+        downloadBtn.style.display = 'inline-block';
+        downloadBtn.onclick = () => downloadMapHTML(prompt, styles);
+      } else {
+        alert('No style generated. Try again.');
+      }
+    });
+
+    function downloadMapHTML(prompt, styles) {
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${prompt} Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>body,html,#map{height:100%;margin:0;}</style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+  <script>
+    const map = L.map('map').setView([20, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+    document.body.style.background = '${styles.background || "#f0f0f0"}';
+  <\/script>
+</body>
+</html>`;
+      const blob = new Blob([html], { type: "text/html" });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${prompt.replace(/\s+/g, "_")}_map.html`;
+      a.click();
+    }
+  </script>
+</body>
+</html>
