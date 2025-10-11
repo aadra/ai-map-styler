@@ -1,0 +1,24 @@
+/* style.css */
+body,html{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial}
+#map{position:absolute;top:0;left:0;right:0;bottom:0}
+.panel{
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 999;
+  width: 360px;
+  background: rgba(255,255,255,0.95);
+  padding: 12px;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+.panel h2{margin:0 0 8px 0;font-size:16px}
+.panel input[type="text"], .panel input[type="color"]{padding:6px;border-radius:6px;border:1px solid #ddd}
+.panel input#prompt{width:100%;box-sizing:border-box;margin-bottom:8px}
+.controls-row{display:flex;gap:6px;margin-bottom:8px}
+.controls-row button{flex:1;padding:8px;border-radius:8px;border:none;background:#2563eb;color:#fff;cursor:pointer}
+.controls-row button:hover{background:#1847b3}
+.pickers{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.pickers > div{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+#status{font-size:13px;color:#333}
+label{font-size:13px;margin-bottom:4px}
