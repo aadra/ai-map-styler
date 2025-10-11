@@ -1,129 +1,39 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>AI Map Styler</title>
-
-  <!-- ✅ Load Leaflet from CDN -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-sA+4X8rY0bLk8N2J0wLB1Dyw9g0tCBLJg4l0i5A6pOc="
-    crossorigin=""
-  />
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-o9N1j7kPvxH1Q3vCqgU7MfjrJz5scc1l9+1i3dAyy+o="
-    crossorigin=""
-  ></script>
-
-  <style>
-    body {
-      font-family: Arial;
-      text-align: center;
-      background: #f0f0f0;
-      padding: 20px;
-    }
-    #map {
-      height: 400px;
-      width: 80%;
-      margin: 20px auto;
-      border-radius: 10px;
-    }
-    textarea, button {
-      padding: 10px;
-      margin: 10px;
-      width: 80%;
-      font-size: 16px;
-    }
-    button {
-      cursor: pointer;
-    }
-  </style>
+  <meta charset="utf-8" />
+  <title>MapLibre AI Styler</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>AI Map Styler 🗺️</h1>
+  <div class="panel">
+    <h2>MapLibre AI Styler</h2>
 
-  <textarea id="prompt" placeholder="Describe your map style (e.g., bubblegum pink oceans, neon green parks)..."></textarea>
-  <br />
-  <button id="generateBtn">Generate Map Style</button>
-  <button id="downloadBtn" style="display:none;">Download HTML</button>
+    <label>Prompt (e.g. "navy blue water, bright red roads, muted land")</label>
+    <input id="prompt" placeholder="Describe the look..." />
+
+    <div class="controls-row">
+      <button id="aiBtn">Generate from Prompt (AI)</button>
+      <button id="applyBtn">Apply Selected Colors</button>
+      <button id="downloadBtn">Download Style JSON</button>
+    </div>
+
+    <div class="pickers">
+      <div><label>Water</label><input type="color" id="waterPicker" value="#001F3F"></div>
+      <div><label>Land</label><input type="color" id="landPicker" value="#F5F5DC"></div>
+      <div><label>Roads</label><input type="color" id="roadsPicker" value="#FF4136"></div>
+      <div><label>Buildings</label><input type="color" id="buildingsPicker" value="#E6E6FA"></div>
+      <div><label>Labels</label><input type="color" id="labelsPicker" value="#222222"></div>
+    </div>
+
+    <div id="status">Status: ready</div>
+  </div>
 
   <div id="map"></div>
 
-  <script>
-    let map = L.map('map').setView([20, 0], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
-    const generateBtn = document.getElementById('generateBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const promptInput = document.getElementById('prompt');
-
-    generateBtn.addEventListener('click', async () => {
-      const prompt = promptInput.value.trim();
-      if (!prompt) return alert('Please enter a prompt');
-
-      generateBtn.disabled = true;
-      generateBtn.textContent = 'Generating...';
-
-      const res = await fetch('/.netlify/functions/generate-style', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
-
-      const data = await res.json();
-      generateBtn.disabled = false;
-      generateBtn.textContent = 'Generate Map Style';
-
-      if (data.styleJSON) {
-        const styles = JSON.parse(data.styleJSON);
-
-        document.body.style.background = styles.background || "#f0f0f0";
-        map.eachLayer(layer => map.removeLayer(layer));
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap',
-          className: 'ai-style'
-        }).addTo(map);
-
-        downloadBtn.style.display = 'inline-block';
-        downloadBtn.onclick = () => downloadMapHTML(prompt, styles);
-      } else {
-        alert('No style generated. Try again.');
-      }
-    });
-
-    function downloadMapHTML(prompt, styles) {
-      const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>${prompt} Map</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <style>body,html,#map{height:100%;margin:0;}</style>
-</head>
-<body>
-  <div id="map"></div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
-  <script>
-    const map = L.map('map').setView([20, 0], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
-    document.body.style.background = '${styles.background || "#f0f0f0"}';
-  <\/script>
-</body>
-</html>`;
-      const blob = new Blob([html], { type: "text/html" });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `${prompt.replace(/\s+/g, "_")}_map.html`;
-      a.click();
-    }
-  </script>
+  <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
