@@ -1,40 +1,66 @@
-import fetch from "node-fetch";
+// functions/generate-style.js
 import OpenAI from "openai";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Stored securely in Netlify env vars
-});
-
-export async function handler(event, context) {
+export async function handler(event) {
   try {
-    const { prompt } = JSON.parse(event.body);
+    if (!process.env.OPENAI_API_KEY) {
+      return { statusCode: 500, body: JSON.stringify({ error: "Missing OPENAI_API_KEY in env" }) };
+    }
 
-    // Ask OpenAI to generate map colors
+    const body = JSON.parse(event.body || "{}");
+    const prompt = body.prompt || "";
+    const overrides = body.overrides || {};
+
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    const system = `
+You are a helpful assistant that outputs ONLY valid JSON (no explanation).
+Given a text prompt describing a map visual style (e.g. "navy blue water, bright red roads, muted land"),
+return a JSON object with keys: name (string), water, land, roads, buildings, labels.
+Each color should be a 7-character hex string like "#123ABC".
+If overrides object is provided, respect those values (do not change them).
+Keep names short.
+`;
+
+    const userMessage = `Prompt: ${prompt}\nOverrides: ${JSON.stringify(overrides || {})}\nReturn the JSON only.`;
+
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        {
-          role: "system",
-          content: "You are a map style generator that returns a JSON of Leaflet map CSS overrides.",
-        },
-        {
-          role: "user",
-          content: `Generate a JSON style object for a Leaflet map with this theme: ${prompt}. Include colors in hex format (for water, land, roads, buildings, parks).`,
-        },
+        { role: "system", content: system },
+        { role: "user", content: userMessage }
       ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 300
     });
 
-    const styleJSON = completion.choices[0].message.content;
+    // SDK may return parsed JSON when using response_format
+    const content = completion.choices?.[0]?.message?.content;
+    let style;
+    if (typeof content === 'object') style = content;
+    else style = JSON.parse(content);
+
+    // Ensure hex format & fill missing with defaults, prefer overrides
+    const fallback = {
+      name: style.name || 'AI style',
+      water: (overrides.water) || style.water || "#a0d8ef",
+      land: (overrides.land) || style.land || "#fff2e6",
+      roads: (overrides.roads) || style.roads || "#ff85c1",
+      buildings: (overrides.buildings) || style.buildings || "#f0e5ff",
+      labels: (overrides.labels) || style.labels || "#222222"
+    };
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ styleJSON }),
+      body: JSON.stringify({ style: fallback })
     };
-  } catch (error) {
-    console.error(error);
+
+  } catch (err) {
+    console.error('generate-style error', err);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
+      body: JSON.stringify({ error: err?.message || String(err) })
     };
   }
 }
